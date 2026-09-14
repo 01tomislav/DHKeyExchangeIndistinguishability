@@ -30,9 +30,7 @@ domain assumption:
 `pwr_comm` is the single cryptographic assumption: that exponentiation
 commutes, `(g^x)^y = (g^y)^x`.
 
-Nothing else is assumed. In particular the string encoding used to pack one
-message inside another is not assumed to round-trip; it is proved to
-(`message_roundtrip`), for arbitrary strings rather than for fixed test values.
+Nothing else is assumed. 
 
 ## 2. The statement
 
@@ -137,19 +135,15 @@ keeping `Message` monomorphic, not a feature of the model.
 
 Stated plainly, because a reviewer will ask:
 
-- **No composition theorem.** This is the single largest gap and the point of
-  the proposed continuation.
+- **No composition theorem.** This is the single largest gap and the point of the proposed continuation.
+- **No efficiency bounds.** The environment is unrestricted, which is why the bound must be statistical. As a *security* claim about Diffie–Hellman the theorem is therefore empty until DDH and a feasibility restriction are added; what is proved is the reduction, not the hardness.
+- **No group structure.** `pwr` is opaque with `pwr_comm` as its only property, so nothing forces `distroR`/`distroI` to be a real DDH instance.
 - **No multiple sessions or session identifiers.** Pins are addressed by a flat
   `String`, so two instances of the same protocol cannot currently coexist.
 - **No corruption of parties.**
 - **No quantification over adversaries.** The dummy adversary is built into the
   design rather than justified by the usual dummy-adversary theorem.
-- **No efficiency bounds.** The environment is unrestricted, which is why the
-  bound must be statistical. As a *security* claim about Diffie–Hellman the
-  theorem is therefore empty until DDH and a feasibility restriction are added;
-  what is proved is the reduction, not the hardness.
-- **No group structure.** `pwr` is opaque with `pwr_comm` as its only property,
-  so nothing forces `distroR`/`distroI` to be a real DDH instance.
+
 
 ## 6. Three obstacles, and where each one stands
 
@@ -220,15 +214,14 @@ dummy-adversary theorem or explicit quantification over adversaries.
 ## 8. Prior work
 
 The closest existing effort is **EasyUC** (Canetti, Stoughton and Varia, CSF
-2019), which mechanises UC in EasyCrypt and from which the address-prefixing
-idea above is taken.
+2019), which mechanises UC in EasyCrypt which heavily influenced this work and from which the address-prefixing idea above is taken.
 
 Reference for the model itself: R. Canetti, *Universally Composable Security*,
 Journal of the ACM 67(5), 2020.
 
 ## 9. Effort
 
-Between two days and a week of part-time human work, plus a few hours and about
+A week of part-time human work, plus a few hours and about
 US$120 of AI agent time, for 3,389 lines of Lean of which roughly 2,700 are
 proof. The proof was written by an AI agent (Claude) under light human
 direction; the definitions, the modelling decisions and the statement of the
