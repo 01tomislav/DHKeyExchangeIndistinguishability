@@ -10,8 +10,8 @@ there is. **They can** — this repository contains a complete, machine-checked,
 `sorry`-free proof of an indistinguishability statement about a Diffie–Hellman
 key exchange, together with all the infrastructure it needed.
 
-What follows is what was proved, what was deliberately left out, what went
-wrong along the way, and what the next step would cost.
+What follows is what was proved, what was deliberately left out, what obstacles
+were found along the way, and what the next step would be.
 
 ---
 
@@ -133,13 +133,10 @@ keeping `Message` monomorphic, not a feature of the model.
 
 ## 5. What is *not* here
 
-Stated plainly, because a reviewer will ask:
-
 - **No composition theorem.** This is the single largest gap and the point of the proposed continuation.
 - **No efficiency bounds.** The environment is unrestricted, which is why the bound must be statistical. As a *security* claim about Diffie–Hellman the theorem is therefore empty until DDH and a feasibility restriction are added; what is proved is the reduction, not the hardness.
 - **No group structure.** `pwr` is opaque with `pwr_comm` as its only property, so nothing forces `distroR`/`distroI` to be a real DDH instance.
-- **No multiple sessions or session identifiers.** Pins are addressed by a flat
-  `String`, so two instances of the same protocol cannot currently coexist.
+- **No multiple sessions or session identifiers.** 
 - **No corruption of parties.**
 - **No quantification over adversaries.** The dummy adversary is built into the
   design rather than justified by the usual dummy-adversary theorem.
@@ -153,13 +150,6 @@ These are the things that made this look risky before it was tried.
 `PMF`/`ENNReal`, with suprema over step bounds, `tsum` manipulation and
 commuting sums past suprema. About 2,700 of the 3,389 lines are proof, and none
 of it needed new probability theory beyond Mathlib.
-
-**Serialising messages inside messages — solved.** Protocol machines pack a
-message into the content of another message. Lean 4.32's string API is
-`ByteArray`-backed with slices and iterators and has no `List Char`
-characterisation of `takeWhile`, so `Message.fromString (toString m) = m` had to
-be built from scratch. It is now a theorem for arbitrary content, not an axiom
-and not a `native_decide` on fixed strings.
 
 **Universe levels when protocols nest — real, measured, and avoidable.** The
 obvious way to compose protocols is to let a sub-protocol be a machine whose
@@ -198,8 +188,6 @@ incidental; it is the enabling ingredient for addressing under composition.
 
 ## 7. Proposed next step
 
-A bounded spike, cheap enough to buy before committing to anything:
-
 1. define `Router.compose` by prefixing pin names and wires;
 2. prove that routing in `ρ.compose "sub" π` on a prefixed name agrees with
    routing in `π`;
@@ -207,14 +195,15 @@ A bounded spike, cheap enough to buy before committing to anything:
 
 If those go through, the universe risk is retired and the remainder of a
 composition theorem is work rather than research. If they do not, that is known
-in days instead of months. Beyond the spike, a composition theorem also needs a
+in days instead of months. Beyond this spike, a composition theorem also needs a
 notion of protocol-with-a-hole, session identifiers, and either the
 dummy-adversary theorem or explicit quantification over adversaries.
 
 ## 8. Prior work
 
 The closest existing effort is **EasyUC** (Canetti, Stoughton and Varia, CSF
-2019), which mechanises UC in EasyCrypt which heavily influenced this work and from which the address-prefixing idea above is taken.
+2019), which mechanises UC in EasyCrypt which heavily influenced this work and 
+from which the address-prefixing idea above is taken.
 
 Reference for the model itself: R. Canetti, *Universally Composable Security*,
 Journal of the ACM 67(5), 2020.
