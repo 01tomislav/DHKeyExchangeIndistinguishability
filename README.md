@@ -3,9 +3,9 @@
 The question this repository was built to answer is narrow and practical:
 
 > Can the basic constructs of Universal Composability, and the parts of a UC
-> proof that actually cost effort, be carried out in Lean 4 at all?
+> proof that actually cost effort, be carried out in Lean 4 with the help of an AI agent?
 
-If they cannot, there is no point in building a full framework. If they can,
+If they cannot, there is no point in proceeding to build a full framework this way. If they can,
 there is. **They can** — this repository contains a complete, machine-checked,
 `sorry`-free proof of an indistinguishability statement about a Diffie–Hellman
 key exchange, together with all the infrastructure it needed.
@@ -49,7 +49,8 @@ Reading it:
   `experimentIdeal` is the same measurement against the ideal protocol.
 - `least_upper_bound` is the smallest `ε` such that *no* test whatsoever can
   separate the real key distribution from the ideal one with advantage above
-  `ε`. Since the tests range over all Boolean functions, this is exactly the
+  `ε`. In this probe, we didn't introduce any efficiency bounds, and
+   the tests here range over all Boolean functions. Therefore `least_upper_bound` here is exactly the
   statistical (total variation) distance between the two distributions.
 
 The bound is the same expression for `outBit = true` and `outBit = false`, and
@@ -73,7 +74,26 @@ The step from here to `least_upper_bound` is where information is thrown away,
 and it is exactly the step that a computational version of this development
 would replace.
 
-## 3. The two protocols
+## 3. The model
+
+Since we are not reproducing the UC computational model literally, here is the
+exact correspondence.
+
+| UC | here |
+|---|---|
+| interactive Turing machine (ITM) with tapes | `Machine α`: a state plus `String → Message → α → PMF (Message × α)` — a transition that returns a *distribution* over (reply, new state) instead of consuming a random tape |
+|ITM instance|`Pin`|
+| identity / PID | `Pin.name : String` |
+| control function restricting external writes | `Router.wires`: an explicit list of unordered pairs of pin names |
+| adversary `A` | folded into the environment i.e. the dummy adversary |
+| `Z` outputs a bit | `env` ends the run by sending a message to `"experiment"` whose content is `"1"` or `"0"`; any other content counts as no output |
+
+The last row deserves a note. `Message.content` is a `String`, so a message that
+ought to carry a bit can carry anything; the experiment's outcome type is
+therefore `Option Bool` rather than `Bool`. That partiality is an artefact of
+keeping `Message` monomorphic, not a feature of the model.
+
+## 4. The two protocols
 
 The real protocol is textbook Diffie–Hellman over channels that the adversary
 can observe and block but not modify (an authenticated-channel, `F_AUTH`-style
@@ -111,30 +131,12 @@ The two key distributions the proof reduces to are the DDH tuples:
 distroR = (g^q1, g^q2, (g^q2)^q1)        distroI = (g^r1, g^r2, g^r3)
 ```
 
-## 4. The model
 
-Since we are not reproducing the UC computational model literally, here is the
-exact correspondence.
-
-| UC | here |
-|---|---|
-| interactive Turing machine with tapes | `Machine α`: a state plus `String → Message → α → PMF (Message × α)` — a transition that returns a *distribution* over (reply, new state) instead of consuming a random tape |
-| control function restricting external writes | `Router.wires`: an explicit list of unordered pairs of pin names |
-| identity / PID | `Pin.name : String` |
-| adversary `A` | folded into the environment: in the real world `env` is wired directly to the forwarders, i.e. the dummy adversary |
-| simulator `S` | `KESim`, given concretely |
-| ideal functionality `F` | `KEIdeal` |
-| `Z` outputs a bit | `env` ends the run by sending a message to `"experiment"` whose content is `"1"` or `"0"`; any other content counts as no output |
-
-The last row deserves a note. `Message.content` is a `String`, so a message that
-ought to carry a bit can carry anything; the experiment's outcome type is
-therefore `Option Bool` rather than `Bool`. That partiality is an artefact of
-keeping `Message` monomorphic, not a feature of the model.
 
 ## 5. What is *not* here
 
 - **No composition theorem.** This is the single largest gap and the point of the proposed continuation.
-- **No efficiency bounds.** The environment is unrestricted, which is why the bound must be statistical. As a *security* claim about Diffie–Hellman the theorem is therefore empty until DDH and a feasibility restriction are added; what is proved is the reduction, not the hardness.
+- **No efficiency bounds.** The environment is unrestricted, which is why the bound is statistical. As a *security* claim about Diffie–Hellman the theorem is therefore empty until DDH and a feasibility restriction are added; what is proved is the reduction, not the hardness.
 - **No group structure.** `pwr` is opaque with `pwr_comm` as its only property, so nothing forces `distroR`/`distroI` to be a real DDH instance.
 - **No multiple sessions or session identifiers.** 
 - **No corruption of parties.**
@@ -142,7 +144,7 @@ keeping `Message` monomorphic, not a feature of the model.
   design rather than justified by the usual dummy-adversary theorem.
 
 
-## 6. Three obstacles, and where each one stands
+## 6. Obstacles, and where they stand
 
 These are the things that made this look risky before it was tried.
 
@@ -175,40 +177,20 @@ The way out is not to nest types at all. Composition should flatten: given a
 protocol and a sub-protocol, produce a single flat router in which the
 sub-protocol's pins are renamed by prefixing, so that an identity becomes a
 *path* rather than a name. `Router` then stays in `Type 1` and composition is an
-ordinary function `Router → Router → Router`. The same prefixing doubles as the
-session-identifier mechanism needed for multiple instances. This is the approach
+ordinary function `Router → Router → Router`. This is the approach
 taken in EasyUC, where identities are lists of integers ("addresses") and a full
 address is obtained by prefixing.
 
-Concretely, hierarchical identities can be carried in the existing
-`Pin.name : String` without changing any type, because this repository already
-contains a proved injective encoding of structured data into a string together
-with its decoder — the self-delimiting round-trip above. That lemma was not
-incidental; it is the enabling ingredient for addressing under composition.
-
-## 7. Proposed next step
-
-1. define `Router.compose` by prefixing pin names and wires;
-2. prove that routing in `ρ.compose "sub" π` on a prefixed name agrees with
-   routing in `π`;
-3. prove that the composed experiment produces the same transcript.
-
-If those go through, the universe risk is retired and the remainder of a
-composition theorem is work rather than research. If they do not, that is known
-in days instead of months. Beyond this spike, a composition theorem also needs a
-notion of protocol-with-a-hole, session identifiers, and either the
-dummy-adversary theorem or explicit quantification over adversaries.
-
-## 8. Prior work
+## 7. Prior work
 
 The closest existing effort is **EasyUC** (Canetti, Stoughton and Varia, CSF
-2019), which mechanises UC in EasyCrypt which heavily influenced this work and 
-from which the address-prefixing idea above is taken.
+2019), https://github.com/easyuc/EasyUC, which mechanises UC in EasyCrypt. 
+EasyUC heavily influenced this work and from there the address-prefixing idea above is taken.
 
 Reference for the model itself: R. Canetti, *Universally Composable Security*,
 Journal of the ACM 67(5), 2020.
 
-## 9. Effort
+## 8. Effort
 
 A week of part-time human work, plus a few hours and about
 US$120 of AI agent time, for 3,389 lines of Lean of which roughly 2,700 are
@@ -216,7 +198,7 @@ proof. The proof was written by an AI agent (Claude) under light human
 direction; the definitions, the modelling decisions and the statement of the
 theorem are the author's.
 
-## 10. Building
+## 9. Building
 
 ```
 lake exe cache get      # fetch Mathlib binaries
